@@ -154,6 +154,20 @@ def ingest_logs():
 def check_alerts(cursor, log_id, host, message, level):
     """Generate alerts based on log content."""
     message_lower = (message or '').lower()
+    # Security attack detection rules
+    security_patterns = {
+        "Brute Force Attack": ["brute force", "multiple login failures", "failed password"],
+        "SQL Injection": ["sql injection", "select * from", "union select"],
+        "Unauthorized Access": ["unauthorized", "illegal access"],
+        "Malware Detection": ["malware", "virus", "trojan"]
+    }
+
+    for alert_name, patterns in security_patterns.items():
+        if any(pattern in message_lower for pattern in patterns):
+            cursor.execute("""
+                INSERT INTO alerts (timestamp, host, severity, rule, log_message, log_id)
+                VALUES (NOW(), %s, %s, %s, %s, %s);
+            """, (host, 'HIGH', alert_name, message, log_id))
     
     # Alert rule 1: Error patterns
     if any(word in message_lower for word in ['error', 'fail', 'critical', 'exception']):
